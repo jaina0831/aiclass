@@ -13,7 +13,7 @@
                 extend: {
                     colors: {
                         'pink-main': '#FF69B4', /* 主背景：亮粉紅 (Hot Pink) */
-                        'pink-dark': '#E05297', /* 較深的粉紅，用於區塊背景和按鈕懸停 */
+                        'pink-dark': '#BE185D', /* 較深的深粉紅 (Deep Raspberry)，用於區塊背景和按鈕懸停 */
                         'pink-light': '#FFB6C1', /* 淺粉紅，用於裝飾 */
                         'beige-main': '#F5F5DC', /* 米白色 (Beige)，用於按鈕背景 */
                         'text-white': '#FFFFFF', /* 純白文字 */
@@ -120,17 +120,45 @@
 
         // 配對問答資料
         const questions = [
+            // q1: 0=宅家, 1=外出
             { id: 'q1', text: '您更喜歡宅在家享受寧靜的週末，還是外出探索新事物？', options: ['🏠 宅家放鬆', '🌏 外出探索'], weight: 0.3 },
+            // q2: 0=尋求支持, 1=獨自解決
             { id: 'q2', text: '在面對壓力時，您會傾向於尋求支持，還是獨自解決問題？', options: ['🤝 尋求支持', '💪 獨自解決'], weight: 0.2 },
+            // q3: 0=非常重要, 1=普通/不重要
             { id: 'q3', text: '在一段關係中，您認為幽默感重要嗎？', options: ['😂 非常重要', '😐 普通/不重要'], weight: 0.25 },
+            // q4: 0=目標清晰, 1=順其自然
             { id: 'q4', text: '您對未來五年的規劃是清晰明確，還是順其自然？', options: ['🎯 目標清晰', '🍃 順其自然'], weight: 0.25 },
         ];
 
-        // 模擬的潛在配對對象資料
+        // 模擬的潛在配對對象資料 - 包含理想答案 (idealAnswers) 以供計算
         const mockMatches = [
-            { name: '小哈 (Harry)', age: 23, bio: '熱愛攝影和旅行的自由工作者，喜歡深度對話。', city: '台北', score: 92, avatar: 'https://placehold.co/100x100/FFFFFF/FF69B4?text=C' },
-            { name: '小賽 (Cedric)', age: 26, bio: '小學教師，喜歡動物，夢想是環遊世界。個性溫和且有耐心。', city: '新北', score: 85, avatar: 'https://placehold.co/100x100/FFFFFF/E05297?text=J' },
-            { name: '小弗 (Fred)', age: 25, bio: '科技業工程師，週末喜歡玩桌遊和烹飪。個性務實且風趣。', city: '新竹', score: 80, avatar: 'https://placehold.co/100x100/FFFFFF/FFB6C1?text=Y' },
+            { 
+                name: '小哈 (Harry)', 
+                age: 23, 
+                bio: '熱愛攝影和旅行的自由工作者，喜歡隨性且深度的對話。', 
+                city: '台北', 
+                avatar: 'https://placehold.co/100x100/FFFFFF/FF69B4?text=C',
+                // Harry: 喜歡外出(1)，喜歡連結/支持(0)，幽默重要(0)，隨興(1)
+                idealAnswers: { 'q1': 1, 'q2': 0, 'q3': 0, 'q4': 1 }
+            },
+            { 
+                name: '小賽 (Cedric)', 
+                age: 26, 
+                bio: '小學教師，喜歡動物，夢想是環遊世界。個性溫和且有耐心。', 
+                city: '新北', 
+                avatar: 'https://placehold.co/100x100/FFFFFF/E05297?text=J',
+                // Cedric: 喜歡外出/旅遊(1)，傾向支持/團體(0)，幽默重要(0)，工作穩定有規劃(0)
+                idealAnswers: { 'q1': 1, 'q2': 0, 'q3': 0, 'q4': 0 }
+            },
+            { 
+                name: '小弗 (Fred)', 
+                age: 25, 
+                bio: '科技業工程師，週末喜歡宅家玩桌遊和烹飪。個性務實且風趣。', 
+                city: '新竹', 
+                avatar: 'https://placehold.co/100x100/FFFFFF/FFB6C1?text=Y',
+                // Fred: 喜歡宅家(0)，獨自解決問題/務實(1)，幽默重要(0)，目標清晰(0)
+                idealAnswers: { 'q1': 0, 'q2': 1, 'q3': 0, 'q4': 0 }
+            },
         ];
 
         // --- 功能函數 ---
@@ -240,6 +268,30 @@
             generatorButton.textContent = '✨ AI 情書草稿';
         }
 
+        // --- 核心算法：計算契合度分數 ---
+        function calculateScores() {
+            mockMatches.forEach(match => {
+                let score = 0;
+                let maxPossibleScore = 100; // 簡化為百分比
+                let currentScore = 0;
+
+                questions.forEach(q => {
+                    const userAns = appState.userAnswers[q.id];
+                    const matchAns = match.idealAnswers[q.id];
+                    
+                    // 如果答案相同，增加該問題權重的分數
+                    if (userAns === matchAns) {
+                        currentScore += q.weight * 100;
+                    }
+                });
+
+                // 加入一點隨機波動 (0~5分)，讓分數看起來不要太過生硬（例如總是 25, 50, 75）
+                // 但要確保不超過 100
+                let randomFlux = Math.floor(Math.random() * 5); 
+                match.score = Math.min(100, Math.round(currentScore + randomFlux));
+            });
+        }
+
         // --- 渲染函數 ---
 
         function renderWelcome() {
@@ -309,6 +361,9 @@
         }
 
         function renderMatches() {
+            // 在渲染結果前，先計算分數
+            calculateScores();
+
             const content = document.getElementById('content');
             const sortedMatches = [...mockMatches].sort((a, b) => b.score - a.score);
 
@@ -349,7 +404,7 @@
             content.innerHTML = `
                 <div class="text-center mb-8">
                     <h2 class="text-3xl font-bold text-white">🎉 配對成功！</h2>
-                    <p class="text-white/80 mt-2">這就是命中注定的相遇嗎？</p>
+                    <p class="text-white/80 mt-2">根據您的回答，我們為您計算出了契合度：</p>
                 </div>
 
                 <div class="space-y-6">
@@ -379,6 +434,14 @@
         }
 
         function handleAnswer(e) {
+            // 獲取按鈕上的答案 index
+            const answerIndex = parseInt(e.currentTarget.dataset.answerIndex);
+            // 獲取當前問題的 ID
+            const questionId = questions[appState.currentQuestionIndex].id;
+            
+            // 儲存用戶的答案
+            appState.userAnswers[questionId] = answerIndex;
+
             appState.currentQuestionIndex++;
             if (appState.currentQuestionIndex >= questions.length) {
                 appState.step = 'matches';
@@ -395,6 +458,7 @@
         function handleStartOver() {
             appState.step = 'welcome';
             appState.currentQuestionIndex = 0;
+            appState.userAnswers = {}; // 重置答案
             render();
         }
 
